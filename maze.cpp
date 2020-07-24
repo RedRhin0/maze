@@ -18,6 +18,8 @@ private:
     int rows;
     int cols;
 
+    bool printTime = true;
+
     std::pair<int, int> entry = std::make_pair(-1, -1);
     std::pair<int, int> exit = std::make_pair(-1, -1);
     bool entryAndExitExist = false;
@@ -47,7 +49,8 @@ private:
 
         int i;
         for (i = 0; i < height; i++) {
-            fwrite(image + (i*width*bytesPerPixel), bytesPerPixel, width, imageFile);
+            //inverse height
+            fwrite(image + ((height - i - 1)*width*bytesPerPixel), bytesPerPixel, width, imageFile);
             fwrite(padding, 1, paddingSize, imageFile);
         }
 
@@ -159,7 +162,7 @@ private:
         reverse(path.begin(), path.end());
     }
 
-    void markEntryAndExit(std::vector<std::vector<std::vector<unsigned char> > > &image, const int wallWidth, const int height, const int width,
+    void markEntryAndExit(unsigned char * imageAsArray, const int wallWidth, const int height, const int width,
         const std::vector<unsigned char> color)
     {
         //entry on top side
@@ -174,7 +177,7 @@ private:
             {
                 for (int j_imag = start_right; j_imag < end_rigth; j_imag++)
                 {
-                    image[i_imag][j_imag] = color;
+                    memcpy((imageAsArray + (width*(i_imag)+j_imag) * 3), color.data(), 3 * sizeof(unsigned char));
                 }
             }
         }
@@ -190,7 +193,7 @@ private:
             {
                 for (int j_imag = start_right; j_imag < end_rigth; j_imag++)
                 {
-                    image[i_imag][j_imag] = color;
+                    memcpy((imageAsArray + (width*(i_imag)+j_imag) * 3), color.data(), 3 * sizeof(unsigned char));
                 }
             }
         }
@@ -206,7 +209,7 @@ private:
             {
                 for (int j_imag = start_right; j_imag < end_rigth; j_imag++)
                 {
-                    image[i_imag][j_imag] = color;
+                    memcpy((imageAsArray + (width*(i_imag)+j_imag) * 3), color.data(), 3 * sizeof(unsigned char));
                 }
             }
         }
@@ -222,7 +225,7 @@ private:
             {
                 for (int j_imag = start_right; j_imag < end_rigth; j_imag++)
                 {
-                    image[i_imag][j_imag] = color;
+                    memcpy((imageAsArray + (width*(i_imag)+j_imag) * 3), color.data(), 3 * sizeof(unsigned char));
                 }
             }
         }
@@ -239,7 +242,7 @@ private:
             {
                 for (int j_imag = start_right; j_imag < end_rigth; j_imag++)
                 {
-                    image[i_imag][j_imag] = color;
+                    memcpy((imageAsArray + (width*(i_imag)+j_imag) * 3), color.data(), 3 * sizeof(unsigned char));
                 }
             }
         }
@@ -255,7 +258,7 @@ private:
             {
                 for (int j_imag = start_right; j_imag < end_rigth; j_imag++)
                 {
-                    image[i_imag][j_imag] = color;
+                    memcpy((imageAsArray + (width*(i_imag)+j_imag) * 3), color.data(), 3 * sizeof(unsigned char));
                 }
             }
         }
@@ -271,7 +274,7 @@ private:
             {
                 for (int j_imag = start_right; j_imag < end_rigth; j_imag++)
                 {
-                    image[i_imag][j_imag] = color;
+                    memcpy((imageAsArray + (width*(i_imag)+j_imag) * 3), color.data(), 3 * sizeof(unsigned char));
                 }
             }
         }
@@ -287,7 +290,7 @@ private:
             {
                 for (int j_imag = start_right; j_imag < end_rigth; j_imag++)
                 {
-                    image[i_imag][j_imag] = color;
+                    memcpy((imageAsArray + (width*(i_imag)+j_imag) * 3), color.data(), 3 * sizeof(unsigned char));
                 }
             }
         }
@@ -310,8 +313,21 @@ public:
         this->cols = defaultSize;
     }
 
+    MyMaze(int rows, int cols, bool printTime)
+    {
+        g.resize(rows, std::vector<MyCell>(cols));
+
+        this->rows = rows;
+        this->cols = cols;
+        this->printTime = printTime;
+
+    }
+
     void buildWithRecursiveBacktracker(std::pair<int, int> entry, std::pair<int, int> exit)
     {
+
+        clock_t start = clock();
+
         std::vector<std::vector<bool> > used(rows, std::vector<bool>(cols, 0));
         int x_start = rand() % rows;
         int y_start = rand() % cols;
@@ -396,6 +412,9 @@ public:
         this->entry = entry;
         this->exit = exit;
         entryAndExitExist = true;
+
+        if (printTime)
+            std::cout << "Maze genaration time: " << double(clock() - start) / CLK_TCK << std::endl;
     }
 
     void buildWithRecursiveBacktracker()
@@ -407,8 +426,6 @@ public:
     {
         const char c_wall = '|';
         const char c_floor = '_';
-
-        std::cout << "maze " << rows << " by " << cols << "!" << std::endl;
 
         for (int j = 0; j < 2 * cols + 1; j++)
             std::cout << c_floor;
@@ -449,30 +466,33 @@ public:
 
     void drawAsBMP(int wallWidth, std::string name, bool solution)
     {
+        clock_t start = clock();
+
         int height = rows * wallWidth * 2 + wallWidth;
         int width = cols * wallWidth * 2 + wallWidth;
-        //temporary but handy array
-        std::vector<std::vector<std::vector<unsigned char> > > image(height, std::vector<std::vector<unsigned char> >(width, backgroundColor));
+        unsigned char * imageAsArray = new unsigned char[height*width * 3];
 
-        //left and top wall
-        for (int i = 0; i < height; i += wallWidth)
+        for (int i = 0; i < height; i++)
         {
-            for (int j = 0; j < wallWidth; j++)
+            for (int j = 0; j < width; j++)
             {
-                for (int k = 0; k < wallWidth; k++)
-                {
-                    image[i + j][k] = wallColor;
-                }
+                memcpy((imageAsArray + (width*i + j) * 3), backgroundColor.data(), 3 * sizeof(unsigned char));
             }
         }
-        for (int i = 0; i < width; i += wallWidth)
+
+        //left and top wall
+        for (int i = 0; i < height; i++)
         {
             for (int j = 0; j < wallWidth; j++)
             {
-                for (int k = 0; k < wallWidth; k++)
-                {
-                    image[j][i + k] = wallColor;
-                }
+                memcpy((imageAsArray + (width*i + j) * 3), wallColor.data(), 3 * sizeof(unsigned char));
+            }
+        }
+        for (int i = 0; i < wallWidth; i++)
+        {
+            for (int j = 0; j < width; j++)
+            {
+                memcpy((imageAsArray + (width*i + j) * 3), wallColor.data(), 3 * sizeof(unsigned char));
             }
         }
 
@@ -492,7 +512,7 @@ public:
                     {
                         for (int j_imag = start_right; j_imag < end_rigth; j_imag++)
                         {
-                            image[i_imag][j_imag] = wallColor;
+                            memcpy((imageAsArray + (width*(i_imag)+j_imag) * 3), wallColor.data(), 3 * sizeof(unsigned char));
                         }
                     }
                 }
@@ -507,7 +527,7 @@ public:
                     {
                         for (int j_imag = start_right; j_imag < end_rigth; j_imag++)
                         {
-                            image[i_imag][j_imag] = wallColor;
+                            memcpy((imageAsArray + (width*(i_imag)+j_imag) * 3), wallColor.data(), 3 * sizeof(unsigned char));
                         }
                     }
                 }
@@ -516,28 +536,21 @@ public:
 
         if (entryAndExitExist)
         {
-            markEntryAndExit(image, wallWidth, height, width, backgroundColor);
+            markEntryAndExit(imageAsArray, wallWidth, height, width, backgroundColor);
         }
 
-        //copy to optimized output array
-        unsigned char * imageAsArray = new unsigned char[height*width * 3];
-        int tmpI = 0;
-        for (int i = 0; i < height; i++)
-        {
-            for (int j = 0; j < width; j++)
-            {
-                //in .bmp (0,0) at down left, but i want top left, so inverse
-                imageAsArray[tmpI++] = image[height - i - 1][j][0];
-                imageAsArray[tmpI++] = image[height - i - 1][j][1];
-                imageAsArray[tmpI++] = image[height - i - 1][j][2];
-            }
-        }
+        if (printTime)
+            std::cout << "Maze image generation time: " << double(clock() - start) / CLK_TCK << std::endl;
 
+        start = clock();
         generateBitmapImage(imageAsArray, height, width, (name + ".bmp").c_str());
-        std::cout << "Image generated!" << std::endl;
+        if (printTime)
+            std::cout << "Maze image write time: " << double(clock() - start) / CLK_TCK << std::endl;
 
         if (solution)
         {
+            start = clock();
+
             findPath(entry, exit);
 
             for (int i = 0; i < path.size() - 1; i++)
@@ -551,27 +564,20 @@ public:
                 {
                     for (int j_imag = start_right; j_imag < end_rigth; j_imag++)
                     {
-                        image[i_imag][j_imag] = pathColor;
+                        memcpy((imageAsArray + (width*(i_imag)+j_imag) * 3), pathColor.data(), 3 * sizeof(unsigned char));
                     }
                 }
             }
 
-            markEntryAndExit(image, wallWidth, height, width, pathColor);
+            markEntryAndExit(imageAsArray, wallWidth, height, width, pathColor);
 
-            //copy again
-            tmpI = 0;
-            for (int i = 0; i < height; i++)
-            {
-                for (int j = 0; j < width; j++)
-                {
-                    //in .bmp (0,0) at down left, but i want top left, so inverse
-                    imageAsArray[tmpI++] = image[height - i - 1][j][0];
-                    imageAsArray[tmpI++] = image[height - i - 1][j][1];
-                    imageAsArray[tmpI++] = image[height - i - 1][j][2];
-                }
-            }
+            if (printTime)
+                std::cout << "Solution image generation time: " << double(clock() - start) / CLK_TCK << std::endl;
+
+            start = clock();
             generateBitmapImage(imageAsArray, height, width, (name + "_solution.bmp").c_str());
-            std::cout << "Solution generated!" << std::endl;
+            if (printTime)
+                std::cout << "Solution image write time: " << double(clock() - start) / CLK_TCK << std::endl;
         }
     }
 
@@ -602,6 +608,7 @@ void help()
     std::cout << "                          default - random coords" << std::endl;
     std::cout << "  -solution               create second .bmp image with path from entry to exit" << std::endl;
     std::cout << "                          without this flag creates no solution" << std::endl;
+    std::cout << "  -noTime                 do not print program run time " << std::endl;
     std::cout << "  -console                print maze in console with ASCII symbols" << std::endl;
     std::cout << "  -wallW <value>          set wall widht in pixels" << std::endl;
     std::cout << "                          default - 5" << std::endl;
@@ -636,6 +643,7 @@ int main(int argc, char *argv[])
 
         bool solution = false;
         bool console = false;
+        bool printTime = true;
 
         for (int i = 0; i < argc; i++)
         {
@@ -697,14 +705,17 @@ int main(int argc, char *argv[])
                 path_g = atoi(argv[++i]);
                 path_b = atoi(argv[++i]);
             }
+            else if (std::string(argv[i]) == "-noTime")
+            {
+                printTime = false;
+            }
 
         }
-        srand(time(NULL));
-        MyMaze a(rows, cols);
-
         clock_t start = clock();
+        srand(time(NULL));
+        MyMaze a(rows, cols, printTime);
+
         a.buildWithRecursiveBacktracker(entry, exit);
-        std::cout << "build time: " << double(clock() - start) / CLK_TCK << std::endl;
 
         if (console)
         {
@@ -712,23 +723,24 @@ int main(int argc, char *argv[])
         }
         else
         {
-            start = clock();
             a.setDrawBackgroundColor(background_r, background_g, background_b);
             a.setDrawWallColor(wall_r, wall_g, wall_b);
             a.setDrawPathColor(path_r, path_g, path_b);
             a.drawAsBMP(wallWidht, outName, solution);
-            std::cout << "draw time: " << double(clock() - start) / CLK_TCK << std::endl;
+            if (printTime)
+                std::cout << std::endl << "Total time: " << double(clock() - start) / CLK_TCK << std::endl;
         }
     }
     else
     {
+        clock_t start = clock();
         srand(time(NULL));
 
         MyMaze a(25, 25);
 
-        clock_t start = clock();
         a.buildWithRecursiveBacktracker();
-        std::cout << "build time: " << double(clock() - start) / CLK_TCK << std::endl;
         a.print();
+
+        std::cout << std::endl << "Total time: " << double(clock() - start) / CLK_TCK << std::endl;
     }
 }
